@@ -2,10 +2,15 @@ package pkg
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 )
+
+type Project struct {
+	Name string `json:"name"`
+}
 
 //go:embed resources/hackli.json
 var hackliJsonContent string
@@ -27,12 +32,41 @@ func VerifyStructure(path string) error {
 	return nil
 }
 
+func GetProject(path string) (*Project, error) {
+	absolutePath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	verifyErr := VerifyStructure(absolutePath)
+	if verifyErr != nil {
+		return nil, verifyErr
+	}
+	jsonContent, err := os.ReadFile(filepath.Join(absolutePath, "hackli.json"))
+	if err != nil {
+		return nil, err
+	}
+
+	var config Project
+	if err := json.Unmarshal(jsonContent, &config); err != nil {
+		return nil, err
+	}
+	return &config, nil
+}
+
 func OpenProject(path string) error {
 	absolutePath, err := filepath.Abs(path)
 	if err != nil {
 		return err
 	}
-	return VerifyStructure(absolutePath)
+	verifyErr := VerifyStructure(absolutePath)
+	if verifyErr != nil {
+		return verifyErr
+	}
+	project, err := GetProject(absolutePath)
+	if err != nil {
+		return err
+	}
+	return OpenEditor(absolutePath, project)
 }
 
 func InitProject(path string) error {
