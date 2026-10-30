@@ -12,7 +12,7 @@ import (
 
 // openCmd represents the open command
 var openCmd = &cobra.Command{
-	Use:   "open",
+	Use:   "open <path>",
 	Short: "Opens project of specific path",
 	Long:  `Opens project of specific path`,
 	Args:  cobra.ExactArgs(1),
@@ -26,7 +26,6 @@ var openCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(openCmd)
-	openCmd.Flags().StringP("path", "p", "", "Path to the project to open")
 
 	// Here you will define your flags and configuration settings.
 

@@ -12,7 +12,7 @@ import (
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
-	Use:   "init",
+	Use:   "init <path>",
 	Short: "Initializes a new project",
 	Long:  `Initializes a new project`,
 	Args:  cobra.ExactArgs(1),
@@ -29,7 +29,6 @@ var initCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(initCmd)
-	initCmd.Flags().StringP("path", "p", "", "Path to the project to initialize")
 
 	// Here you will define your flags and configuration settings.
 
