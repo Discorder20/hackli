@@ -1,6 +1,7 @@
 package pkg
 
-func OpenEditor(path string, project *Project) error {
+// tea "charm.land/bubbletea/v2"
 
+func OpenEditor(folderPath string, project *Project) error {
 	return nil
 }
