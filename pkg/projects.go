@@ -1,10 +1,14 @@
 package pkg
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
 )
+
+//go:embed resources/hackli.json
+var hackliJsonContent string
 
 func VerifyStructure(path string) error {
 	absolutePath, err := filepath.Abs(path)
@@ -35,6 +39,10 @@ func InitProject(path string) error {
 	hackliJsonPath := filepath.Join(absolutePath, "hackli.json")
 	if _, err := os.Stat(hackliJsonPath); os.IsNotExist(err) {
 		file, err := os.Create(hackliJsonPath)
+		if err != nil {
+			return err
+		}
+		_, err = file.WriteString(hackliJsonContent)
 		if err != nil {
 			return err
 		}
