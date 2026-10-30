@@ -15,6 +15,10 @@ func VerifyStructure(path string) error {
 	if err != nil {
 		return err
 	}
+	//check if the path exists
+	if _, err := os.Stat(absolutePath); os.IsNotExist(err) {
+		return fmt.Errorf("project path does not exist: %s", absolutePath)
+	}
 	// check if it includes hackli.json
 	hackliJsonPath := filepath.Join(absolutePath, "hackli.json")
 	if _, err := os.Stat(hackliJsonPath); os.IsNotExist(err) {
