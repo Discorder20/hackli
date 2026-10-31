@@ -163,7 +163,6 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) View() tea.View {
-	// render navbar with lipgloss
 	var navbar string
 	for i := 0; i < tabsCount; i++ {
 		if i == m.currentTab {
