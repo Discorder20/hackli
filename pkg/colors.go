@@ -6,13 +6,14 @@ const PrimaryColor = "#47e985"
 const DisabledColor = "#535353"
 const NeutralColor = "#FAFAFA"
 const SelectedColor = "#4fcdff"
+const BlackColor = "#000000"
 
 var TabPrimary = lipgloss.NewStyle().
 	Foreground(lipgloss.Color(NeutralColor))
 
 var TabHighlighted = lipgloss.NewStyle().
 	Bold(true).
-	Foreground(lipgloss.Black).
+	Foreground(lipgloss.Color(BlackColor)).
 	Background(lipgloss.Color(PrimaryColor))
 
 var Dark = lipgloss.NewStyle().
