@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"fmt"
-	"os"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -15,9 +14,6 @@ const (
 const tabsCount = 2
 
 var tabNames = [tabsCount]string{"Overview", "Styles"}
-var paramsOverviewPointerList []*string
-
-var currentTabOptions = -1
 
 func clearScreen() {
 	fmt.Print("\033[2J\033[H")
@@ -37,6 +33,17 @@ func textParam(prop, value string, selected bool) string {
 	)
 }
 
+func selectedOverviewField(m *model) *string {
+	switch m.cursorOverview {
+	case 0:
+		return &m.project.Name
+	case 1:
+		return &m.project.Url
+	default:
+		panic("invalid overview cursor")
+	}
+}
+
 type model struct {
 	folderPath     string
 	project        *Project
@@ -44,6 +51,15 @@ type model struct {
 	input          string
 	inputEnabled   bool
 	cursorOverview int
+}
+
+func (m *model) optionCount() int {
+	switch m.currentTab {
+	case OverviewTab:
+		return 2
+	default:
+		return 0
+	}
 }
 
 func (m *model) renderInput() string {
@@ -63,17 +79,15 @@ func (m *model) renderCard() string {
 	}
 	switch m.currentTab {
 	case OverviewTab:
-		currentTabOptions = 2
 		nameParam := textParam("Name", m.project.Name, m.cursorOverview == 0)
-		solutionParam := textParam("Url", m.project.Url, m.cursorOverview == 1)
+		urlParam := textParam("Url", m.project.Url, m.cursorOverview == 1)
 		return OverviewCardStyle(color).Render(
 			lipgloss.JoinVertical(lipgloss.Top,
 				nameParam,
-				solutionParam,
+				urlParam,
 			),
 		)
 	case StylesTab:
-		currentTabOptions = 0
 		return StylesCardStyle(color).Render("")
 	}
 	return ""
@@ -85,7 +99,7 @@ func (m *model) HandleInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 		key := msg.String()
 		switch key {
 		case "enter":
-			*paramsOverviewPointerList[m.cursorOverview] = m.input
+			*selectedOverviewField(m) = m.input
 			m.inputEnabled = false
 		case "esc":
 			m.inputEnabled = false
@@ -112,26 +126,21 @@ func (m *model) HandleInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) HandleMove(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		key := msg.String()
-		if key == "q" || key == "Q" || key == "ctrl+c" {
-			clearScreen()
-			return m, tea.Quit
-		}
 		switch msg.String() {
 		case "tab":
 			m.currentTab = (m.currentTab + 1) % tabsCount
 		case "e":
 			if m.currentTab == OverviewTab {
-				m.input = *paramsOverviewPointerList[m.cursorOverview]
+				m.input = *selectedOverviewField(m)
 				m.inputEnabled = true
 			}
 		case "down":
 			if m.currentTab == OverviewTab {
-				m.cursorOverview = (m.cursorOverview + 1) % currentTabOptions
+				m.cursorOverview = (m.cursorOverview + 1) % m.optionCount()
 			}
 		case "up":
 			if m.currentTab == OverviewTab {
-				m.cursorOverview = (m.cursorOverview - 1 + currentTabOptions) % currentTabOptions
+				m.cursorOverview = (m.cursorOverview - 1 + m.optionCount()) % m.optionCount()
 			}
 		}
 	}
@@ -143,6 +152,9 @@ func (m *model) Init() tea.Cmd {
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if key, ok := msg.(tea.KeyPressMsg); ok && (key.String() == "ctrl+c" || key.String() == "q" || key.String() == "Q") {
+		return m, tea.Quit
+	}
 	if m.inputEnabled {
 		return m.HandleInput(msg)
 	} else {
@@ -175,14 +187,9 @@ func OpenEditor(folderPath string, project *Project) error {
 		project:    project,
 		currentTab: OverviewTab,
 	}
-	paramsOverviewPointerList = []*string{
-		&m.project.Name,
-		&m.project.Url,
-	}
 	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
-		fmt.Printf("Alas, there's been an error: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("run editor: %w", err)
 	}
 	return nil
 }
