@@ -8,17 +8,20 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-var tabNames = [tabsCount]string{"Overview", "Styles"}
-var paramsOverviewPointerList []*string
-
 const (
 	OverviewTab = iota
 	StylesTab
 )
-
 const tabsCount = 2
 
+var tabNames = [tabsCount]string{"Overview", "Styles"}
+var paramsOverviewPointerList []*string
+
 var currentTabOptions = -1
+
+func clearScreen() {
+	fmt.Print("\033[2J\033[H")
+}
 
 func textParam(prop, value string, selected bool) string {
 	var style lipgloss.Style
@@ -32,24 +35,6 @@ func textParam(prop, value string, selected bool) string {
 		style.Align(lipgloss.Left).Render("  "+prop+":"),
 		style.Align(lipgloss.Right).Render(value+"  "),
 	)
-}
-
-func overviewCard(color string) lipgloss.Style {
-	var overViewCard = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(color)).
-		Width(50).
-		Height(25)
-	return overViewCard
-}
-
-func stylesCard(color string) lipgloss.Style {
-	var stylesCard = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(color)).
-		Width(50).
-		Height(25)
-	return stylesCard
 }
 
 type model struct {
@@ -81,7 +66,7 @@ func (m *model) renderCard() string {
 		currentTabOptions = 2
 		nameParam := textParam("Name", m.project.Name, m.cursorOverview == 0)
 		solutionParam := textParam("Url", m.project.Url, m.cursorOverview == 1)
-		return overviewCard(color).Render(
+		return OverviewCardStyle(color).Render(
 			lipgloss.JoinVertical(lipgloss.Top,
 				nameParam,
 				solutionParam,
@@ -89,7 +74,7 @@ func (m *model) renderCard() string {
 		)
 	case StylesTab:
 		currentTabOptions = 0
-		return stylesCard(color).Render("")
+		return StylesCardStyle(color).Render("")
 	}
 	return ""
 }
@@ -128,8 +113,8 @@ func (m *model) HandleMove(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		key := msg.String()
-		if key == "q" || key == "Q" {
-			fmt.Print("\033[2J\033[H")
+		if key == "q" || key == "Q" || key == "ctrl+c" {
+			clearScreen()
 			return m, tea.Quit
 		}
 		switch msg.String() {
@@ -140,9 +125,6 @@ func (m *model) HandleMove(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.input = *paramsOverviewPointerList[m.cursorOverview]
 				m.inputEnabled = true
 			}
-		case "ctrl+c":
-			fmt.Print("\033[2J\033[H")
-			return m, tea.Quit
 		case "down":
 			if m.currentTab == OverviewTab {
 				m.cursorOverview = (m.cursorOverview + 1) % currentTabOptions

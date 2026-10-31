@@ -36,3 +36,21 @@ var SelectedParam = lipgloss.NewStyle().
 	Foreground(lipgloss.Color(SelectedColor)).
 	Width(24).
 	Bold(true)
+
+func OverviewCardStyle(color string) lipgloss.Style {
+	var overViewCard = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(color)).
+		Width(50).
+		Height(25)
+	return overViewCard
+}
+
+func StylesCardStyle(color string) lipgloss.Style {
+	var stylesCard = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(color)).
+		Width(50).
+		Height(25)
+	return stylesCard
+}
