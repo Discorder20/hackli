@@ -9,6 +9,7 @@ import (
 )
 
 var tabNames = [tabsCount]string{"Overview", "Styles"}
+var paramsOverviewPointerList []*string
 
 const (
 	OverviewTab = iota
@@ -17,45 +18,14 @@ const (
 
 const tabsCount = 2
 
-const primaryColor = "#47e985"
-const disabledColor = "#535353"
+var currentTabOptions = -1
 
-var regularTab = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("#FAFAFA"))
-
-var highlightedTab = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.Color("#000000")).
-	Background(lipgloss.Color(primaryColor))
-
-var darkerText = lipgloss.NewStyle().
-	Foreground(lipgloss.Color(disabledColor))
-
-var border = lipgloss.NewStyle().
-	Border(lipgloss.RoundedBorder()).
-	BorderForeground(lipgloss.Color(primaryColor)).
-	Width(50)
-
-var disabledBorder = lipgloss.NewStyle().
-	Border(lipgloss.RoundedBorder()).
-	BorderForeground(lipgloss.Color(disabledColor)).
-	Width(50)
-
-var regularParam = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("#FAFAFA")).
-	Width(24)
-
-var highlightedParam = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("#FAFAFA")).
-	Width(24).
-	Bold(true)
-
-func param(prop, value string, selected bool) string {
+func textParam(prop, value string, selected bool) string {
 	var style lipgloss.Style
 	if selected {
-		style = highlightedParam
+		style = SelectedParam
 	} else {
-		style = regularParam
+		style = RegularInput
 	}
 
 	return lipgloss.JoinHorizontal(lipgloss.Top,
@@ -93,27 +63,97 @@ type model struct {
 
 func (m *model) renderInput() string {
 	if !m.inputEnabled {
-		return disabledBorder.Render("")
+		return InputDisabled.Render("")
 	} else {
-		return border.Render(m.input)
+		return Input.Render(m.input)
 	}
 }
 
 func (m *model) renderCard() string {
 	var color string
 	if m.inputEnabled {
-		color = disabledColor
+		color = DisabledColor
 	} else {
-		color = primaryColor
+		color = PrimaryColor
 	}
 	switch m.currentTab {
 	case OverviewTab:
-		nameParam := param("Name", m.project.Name, m.cursorOverview == 0)
-		return overviewCard(color).Render(nameParam)
+		currentTabOptions = 2
+		nameParam := textParam("Name", m.project.Name, m.cursorOverview == 0)
+		solutionParam := textParam("Url", m.project.Url, m.cursorOverview == 1)
+		return overviewCard(color).Render(
+			lipgloss.JoinVertical(lipgloss.Top,
+				nameParam,
+				solutionParam,
+			),
+		)
 	case StylesTab:
+		currentTabOptions = 0
 		return stylesCard(color).Render("")
 	}
 	return ""
+}
+
+func (m *model) HandleInput(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyPressMsg:
+		key := msg.String()
+		switch key {
+		case "enter":
+			*paramsOverviewPointerList[m.cursorOverview] = m.input
+			m.inputEnabled = false
+		case "esc":
+			m.inputEnabled = false
+		case "backspace":
+			runes := []rune(m.input)
+			if len(runes) > 0 {
+				m.input = string(runes[:len(runes)-1])
+			}
+		case "space":
+			m.input += " "
+		default:
+			if len([]rune(key)) == 1 {
+				m.input += key
+			}
+		}
+	case tea.PasteMsg:
+		if m.inputEnabled {
+			m.input += msg.Content
+		}
+	}
+	return m, nil
+}
+
+func (m *model) HandleMove(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyPressMsg:
+		key := msg.String()
+		if key == "q" || key == "Q" {
+			fmt.Print("\033[2J\033[H")
+			return m, tea.Quit
+		}
+		switch msg.String() {
+		case "tab":
+			m.currentTab = (m.currentTab + 1) % tabsCount
+		case "e":
+			if m.currentTab == OverviewTab {
+				m.input = *paramsOverviewPointerList[m.cursorOverview]
+				m.inputEnabled = true
+			}
+		case "ctrl+c":
+			fmt.Print("\033[2J\033[H")
+			return m, tea.Quit
+		case "down":
+			if m.currentTab == OverviewTab {
+				m.cursorOverview = (m.cursorOverview + 1) % currentTabOptions
+			}
+		case "up":
+			if m.currentTab == OverviewTab {
+				m.cursorOverview = (m.cursorOverview - 1 + currentTabOptions) % currentTabOptions
+			}
+		}
+	}
+	return m, nil
 }
 
 func (m *model) Init() tea.Cmd {
@@ -121,45 +161,11 @@ func (m *model) Init() tea.Cmd {
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyPressMsg:
-		key := msg.String()
-		if key == "ctrl+c" || key == "q" || key == "Q" {
-			fmt.Print("\033[2J\033[H")
-			return m, tea.Quit
-		}
-		if m.inputEnabled {
-			switch key {
-			case "enter":
-				m.project.Name = m.input
-				m.inputEnabled = false
-			case "esc":
-				m.inputEnabled = false
-			case "backspace":
-				runes := []rune(m.input)
-				if len(runes) > 0 {
-					m.input = string(runes[:len(runes)-1])
-				}
-			case "space":
-				m.input += " "
-			default:
-				if len([]rune(key)) == 1 {
-					m.input += key
-				}
-			}
-			break
-		}
-		switch msg.String() {
-		case "tab":
-			m.currentTab = (m.currentTab + 1) % tabsCount
-		case "e":
-			if m.currentTab == OverviewTab {
-				m.input = m.project.Name
-				m.inputEnabled = true
-			}
-		}
+	if m.inputEnabled {
+		return m.HandleInput(msg)
+	} else {
+		return m.HandleMove(msg)
 	}
-	return m, nil
 }
 
 func (m *model) View() tea.View {
@@ -167,15 +173,15 @@ func (m *model) View() tea.View {
 	var navbar string
 	for i := 0; i < tabsCount; i++ {
 		if i == m.currentTab {
-			navbar += highlightedTab.Render(fmt.Sprintf(" %s ", tabNames[i]))
+			navbar += TabHighlighted.Render(fmt.Sprintf(" %s ", tabNames[i]))
 		} else {
-			navbar += regularTab.Render(fmt.Sprintf(" %s ", tabNames[i]))
+			navbar += TabPrimary.Render(fmt.Sprintf(" %s ", tabNames[i]))
 		}
 	}
 
 	navbar += "\n\n" + m.renderCard()
 	navbar += "\n\n" + m.renderInput()
-	navbar += darkerText.Render("\n\n\ntab to switch tabs | q to quit")
+	navbar += Dark.Render("\n\n\ntab to switch tabs | q to quit")
 
 	return tea.NewView(navbar)
 }
@@ -186,6 +192,10 @@ func OpenEditor(folderPath string, project *Project) error {
 		folderPath: folderPath,
 		project:    project,
 		currentTab: OverviewTab,
+	}
+	paramsOverviewPointerList = []*string{
+		&m.project.Name,
+		&m.project.Url,
 	}
 	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {

@@ -10,6 +10,7 @@ import (
 
 type Project struct {
 	Name string `json:"name"`
+	Url  string `json:"url"`
 }
 
 //go:embed resources/hackli.json
