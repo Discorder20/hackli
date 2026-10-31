@@ -33,7 +33,16 @@ func textParam(prop, value string, selected bool) string {
 	)
 }
 
-func selectedOverviewField(m *model) *string {
+type model struct {
+	folderPath     string
+	project        *Project
+	currentTab     int
+	input          string
+	inputEnabled   bool
+	cursorOverview int
+}
+
+func (m *model) selectedOverviewField() *string {
 	switch m.cursorOverview {
 	case 0:
 		return &m.project.Name
@@ -42,15 +51,6 @@ func selectedOverviewField(m *model) *string {
 	default:
 		panic("invalid overview cursor")
 	}
-}
-
-type model struct {
-	folderPath     string
-	project        *Project
-	currentTab     int
-	input          string
-	inputEnabled   bool
-	cursorOverview int
 }
 
 func (m *model) optionCount() int {
@@ -99,7 +99,7 @@ func (m *model) HandleInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 		key := msg.String()
 		switch key {
 		case "enter":
-			*selectedOverviewField(m) = m.input
+			*m.selectedOverviewField() = m.input
 			m.inputEnabled = false
 		case "esc":
 			m.inputEnabled = false
@@ -131,7 +131,7 @@ func (m *model) HandleMove(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.currentTab = (m.currentTab + 1) % tabsCount
 		case "e":
 			if m.currentTab == OverviewTab {
-				m.input = *selectedOverviewField(m)
+				m.input = *m.selectedOverviewField()
 				m.inputEnabled = true
 			}
 		case "down":
@@ -153,6 +153,7 @@ func (m *model) Init() tea.Cmd {
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if key, ok := msg.(tea.KeyPressMsg); ok && (key.String() == "ctrl+c" || key.String() == "q" || key.String() == "Q") {
+		clearScreen()
 		return m, tea.Quit
 	}
 	if m.inputEnabled {
@@ -180,7 +181,7 @@ func (m *model) View() tea.View {
 }
 
 func OpenEditor(folderPath string, project *Project) error {
-	fmt.Print("\033[2J\033[H")
+	clearScreen()
 	m := &model{
 		folderPath: folderPath,
 		project:    project,
